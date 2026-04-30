@@ -255,7 +255,7 @@ JOINTS_MAPPINGS = {
         "R_Wrist": "right_rubber_hand_link",
     },
     ("mocap", "g1"): {
-        "Spine1": "pelvis_contour_link",
+        "Spine1": "torso_link",  # human mid-spine → robot torso (after waist joints); was pelvis_contour_link
         "LeftUpLeg": "left_hip_pitch_link",
         "LeftLeg": "left_knee_link",
         "LeftToeBase": "left_ankle_roll_sphere_5_link",
@@ -264,10 +264,12 @@ JOINTS_MAPPINGS = {
         "RightToeBase": "right_ankle_roll_sphere_5_link",
         "LeftArm": "left_shoulder_roll_link",
         "LeftForeArm": "left_elbow_link",
-        "LeftHandMiddle3": "left_sphere_hand_link",
+        # "LeftHandMiddle3": "left_sphere_hand_link",
+        "LeftHandMiddle3": "left_rubber_hand_link", # just added
         "RightArm": "right_shoulder_roll_link",
         "RightForeArm": "right_elbow_link",
-        "RightHandMiddle3": "right_sphere_hand_link",
+        # "RightHandMiddle3": "right_sphere_hand_link",
+        "RightHandMiddle3": "right_rubber_hand_link", # just added
         "LeftFoot": "left_ankle_intermediate_1_link",
         "RightFoot": "right_ankle_intermediate_1_link",
     },

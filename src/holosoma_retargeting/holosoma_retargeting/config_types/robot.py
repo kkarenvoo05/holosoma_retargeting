@@ -12,12 +12,13 @@ import numpy as np
 class RobotDefaults(TypedDict):
     robot_dof: int
     robot_height: float
+    robot_natural_hip_height: float
     object_name: str
 
 
 _ROBOT_DEFAULTS: dict[str, RobotDefaults] = {
-    "g1": {"robot_dof": 29, "robot_height": 1.32, "object_name": "ground"},
-    "t1": {"robot_dof": 23, "robot_height": 1.2, "object_name": "ground"},
+    "g1": {"robot_dof": 29, "robot_height": 1.32, "robot_natural_hip_height": 0.65, "object_name": "ground"},
+    "t1": {"robot_dof": 23, "robot_height": 1.2, "robot_natural_hip_height": 0.55, "object_name": "ground"},
 }
 
 
@@ -59,6 +60,7 @@ class RobotConfig:
     # Robot configuration (optional overrides)
     robot_dof: int | None = None
     robot_height: float | None = None
+    robot_natural_hip_height: float | None = None
     robot_name: str | None = None
     robot_urdf_file: str | None = None
 
@@ -94,6 +96,17 @@ class RobotConfig:
     ROBOT_HEIGHT = property(
         _robot_height,
         doc="Get robot height - use override if provided, else use robot_type default.",
+    )
+
+    def _robot_natural_hip_height(self) -> float:
+        """Get robot natural hip height - pelvis Z when standing with straight legs."""
+        if self.robot_natural_hip_height is not None:
+            return self.robot_natural_hip_height
+        return _ROBOT_DEFAULTS[self.robot_type]["robot_natural_hip_height"]
+
+    ROBOT_NATURAL_HIP_HEIGHT = property(
+        _robot_natural_hip_height,
+        doc="Get robot natural hip height - pelvis Z when standing with straight legs.",
     )
 
     def _robot_name(self) -> str:
@@ -187,6 +200,7 @@ class RobotConfig:
             base.update(
                 {
                     "20": 0.3,  # waist roll
+                    # "21": 0.35,  # waist pitch (tightened from URDF 0.52; cost handles primary discouragement)
                     "25": 1.4,  # right elbow
                     "26": 0.2,  # right wrist
                     "27": 0.3,
@@ -208,7 +222,8 @@ class RobotConfig:
             return self.manual_cost
 
         if self.robot_type == "g1":
-            return {"19": 0.2, "20": 0.2}  # waist yaw, waist roll
+            # return {"19": 0.2, "20": 0.2, "21": 0.5}  # waist yaw, waist roll, waist pitch
+            return {"19": 0.2, "20": 0.2}
         return {}
 
     MANUAL_COST = property(_manual_cost, doc="Get manual cost weights.")
@@ -219,6 +234,7 @@ class RobotConfig:
             return self.nominal_tracking_indices
 
         if self.robot_type == "g1":
+            # return np.arange(22)  # legs (0-18) + waist yaw/roll/pitch (19-21)
             return np.arange(19)
         if self.robot_type == "t1":
             return np.concatenate([np.arange(7), np.arange(11, 23)])

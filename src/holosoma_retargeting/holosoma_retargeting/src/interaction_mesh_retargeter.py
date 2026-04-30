@@ -125,7 +125,63 @@ class InteractionMeshRetargeter:
         else:
             self.has_dynamic_object = False
 
+        # Pre-compute which geom IDs belong to the terrain/object (not robot, not world).
+        # We identify object bodies as any body whose name is NOT empty/world and is NOT
+        # a robot link (robot links all have a freejoint or hinge joint as a child).
+        # The simplest heuristic: a body belongs to the object if its name contains the
+        # object_name string OR its name contains known terrain body keywords.
+        # This is robust against geom names that don't match the object_name.
+        self._object_geom_ids: set[int] = set()
+        self._ground_geom_ids: set[int] = set()
+        _all_geom_names = [
+            mujoco.mj_id2name(self.robot_model, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
+            for g in range(self.robot_model.ngeom)
+        ]
+        for g in range(self.robot_model.ngeom):
+            geom_name = _all_geom_names[g]
+            body_id = int(self.robot_model.geom_bodyid[g])
+            body_name = mujoco.mj_id2name(self.robot_model, mujoco.mjtObj.mjOBJ_BODY, body_id) or ""
+            # Geom is "ground" if the geom name contains "ground"
+            if "ground" in geom_name:
+                self._ground_geom_ids.add(g)
+            # Geom belongs to the object/terrain if:
+            #   - the object_name substring appears in the geom name, OR
+            #   - the body name contains the object_name, OR
+            #   - the body name contains known terrain keywords and is not the worldbody (id 0)
+            elif (
+                self.object_name in geom_name
+                or self.object_name in body_name
+                or (
+                    body_id != 0  # not worldbody
+                    and "ground" not in body_name
+                    and any(
+                        kw in body_name
+                        for kw in ("stair", "box", "step", "terrain", "platform", "ramp")
+                    )
+                )
+            ):
+                self._object_geom_ids.add(g)
+
+        # For static terrain objects (no freejoint — has_dynamic_object is False), the Viser
+        # fallback position was zeros, but the MuJoCo body can be placed anywhere (e.g. the
+        # staircase body is at pos="0.5 0.05 0" in box_body.xml). We compute the true world
+        # position of each object body by running mj_forward once with a neutral config.
+        # This is stored and used in draw_q / viser_utils instead of np.zeros(3).
+        self._static_object_pos = np.zeros(3)   # body-frame world pos (xyz)
+        self._static_object_quat = np.array([1.0, 0.0, 0.0, 0.0])  # wxyz identity
+        if not self.has_dynamic_object and self._object_geom_ids:
+            # Run forward kinematics with a zero/neutral configuration
+            _tmp_data = mujoco.MjData(self.robot_model)
+            mujoco.mj_forward(self.robot_model, _tmp_data)
+            # Find the body that owns the first object geom
+            first_obj_geom = next(iter(sorted(self._object_geom_ids)))
+            obj_body_id = int(self.robot_model.geom_bodyid[first_obj_geom])
+            self._static_object_pos = np.array(_tmp_data.xpos[obj_body_id])
+            self._static_object_quat = np.array(_tmp_data.xquat[obj_body_id])  # wxyz in MuJoCo
+            print(f"[Viser] Static object body world pos = {np.round(self._static_object_pos, 4)}")
+
         self.nq = self.robot_model.nq
+
 
         self.q_a_init_idx = q_a_init_idx
         self.q_a_indices = np.arange(7 + self.q_a_init_idx, 7 + self.task_constants.ROBOT_DOF)
@@ -379,6 +435,23 @@ class InteractionMeshRetargeter:
                 adj_list = get_adjacency_list(source_tetrahedra, len(source_vertices))
                 target_laplacian = calculate_laplacian_coordinates(source_vertices, adj_list)
 
+                # ========== EXTRACT TARGET LEFT HAND Z-HEIGHT ==========
+                # Find the left hand joint in human motion
+                # Adjust this based on your demo_joints naming
+                if "LeftHand" in self.demo_joints:
+                    left_hand_idx = self.demo_joints.index("LeftHand")
+                elif "left_hand" in self.demo_joints:
+                    left_hand_idx = self.demo_joints.index("left_hand")
+                else:
+                    # You'll need to find the correct name in your data
+                    left_hand_idx = None
+                
+                target_left_hand_z = None
+                if left_hand_idx is not None:
+                    # Get z-coordinate of left hand from human motion
+                    target_left_hand_z = human_joint_motions[i, left_hand_idx, 2]
+                # =======================================================
+
                 # Run optimization
                 if original:
                     w_nominal_tracking = self.w_nominal_tracking_init
@@ -455,6 +528,7 @@ class InteractionMeshRetargeter:
                 initial_fps=30,
                 initial_interp_mult=2,
                 loop=False,
+                static_object_pos=self._static_object_pos,
             )
 
             # 4) optional: visibility toggle
@@ -487,6 +561,7 @@ class InteractionMeshRetargeter:
         q_a_nominal: np.ndarray | None = None,
         verbose=False,
         init_t=False,
+        target_left_hand_z: float | None = None,
     ):
         """The main function to solve a single iteration of the DiffIK problem.
         Args:
@@ -574,6 +649,36 @@ class InteractionMeshRetargeter:
                         Jxy @ dqa <= p_ub[:2],
                     ]
 
+        # ========== LEFT HAND Z-HEIGHT CONSTRAINT ==========
+        if target_left_hand_z is not None:
+            # Get the left hand link name (adjust based on your robot's naming)
+            left_hand_link = "left_hand_link"  # or whatever your robot calls it
+            # You might need to look at task_constants.JOINTS_MAPPING or similar
+            
+            # Compute Jacobian for left hand
+            J_hand_dict, p_hand_dict, _ = self._calc_manipulator_jacobians(
+                q, 
+                links={"left_hand": left_hand_link},
+                obj_frame=False  # We want world frame for z-height
+            )
+            
+            # Extract z-component of Jacobian (row 2, which is z-axis)
+            J_left_hand_z = J_hand_dict["left_hand"][2, :]  # (nq_a,)
+            
+            # Current z-position of left hand
+            current_z = p_hand_dict["left_hand"][2]
+            
+            # Constraint: J_z @ dqa = target_z - current_z
+            # This enforces that after the update, z-position equals target
+            z_tolerance = 0.005  # 5mm tolerance, adjust as needed
+            rhs = target_left_hand_z - current_z
+            
+            constraints += [
+                J_left_hand_z @ dqa >= rhs - z_tolerance,
+                J_left_hand_z @ dqa <= rhs + z_tolerance,
+            ]
+        # ===================================================
+
         # Non-penetration constraints
         Js, phis = self._update_jacobians_and_phis_from_q(q)
         for key, phi in phis.items():
@@ -655,6 +760,7 @@ class InteractionMeshRetargeter:
         q_a_nominal: np.ndarray | None = None,
         init_t: bool = False,
         n_iter: int = 10,
+        target_left_hand_z: float | None = None,
     ):
         """Iterate the solver for multiple iterations."""
         last_cost = np.inf
@@ -671,6 +777,7 @@ class InteractionMeshRetargeter:
                 q_a_nominal=q_a_nominal,
                 w_nominal_tracking=w_nominal_tracking,
                 init_t=init_t,
+                target_left_hand_z=target_left_hand_z,
             )
             if np.isclose(cost, last_cost):
                 break
@@ -697,12 +804,16 @@ class InteractionMeshRetargeter:
                 object_quat = q[-4:]
                 object_pos = q[-7:-4]
             else:
-                object_quat = np.asarray([1, 0, 0, 0])
-                object_pos = np.zeros(3)
+                # Static terrain (fixed body): use the true world position computed at init
+                # from mj_forward, NOT zeros.  The body can be anywhere (e.g. staircase at
+                # pos="0.5 0.05 0" in box_body.xml).
+                object_pos = self._static_object_pos
+                object_quat = self._static_object_quat
 
             # Update object base frame
             self.object_base.position = object_pos
-            self.object_base.wxyz = object_quat  # Assuming quaternion is in wxyz order
+            self.object_base.wxyz = object_quat  # wxyz order
+
 
     def draw_keypoints(self, p, name="keypoint", rgba=(0, 0, 1, 1)):
         """Draw keypoints in visualization."""
@@ -893,16 +1004,16 @@ class InteractionMeshRetargeter:
                 return False
             if contype[g2] == 0 and conaff[g2] == 0:
                 return False
-            if self.object_name in self._geom_names[g1] and "ground" in self._geom_names[g2]:
+            # Use pre-computed geom-ID sets (robust to any geom naming convention)
+            is_obj1 = g1 in self._object_geom_ids
+            is_obj2 = g2 in self._object_geom_ids
+            is_gnd1 = g1 in self._ground_geom_ids or "ground" in self._geom_names[g1]
+            is_gnd2 = g2 in self._ground_geom_ids or "ground" in self._geom_names[g2]
+            # Skip object↔ground pairs (object sits on ground; not a robot collision)
+            if (is_obj1 and is_gnd2) or (is_gnd1 and is_obj2):
                 return False
-            if "ground" in self._geom_names[g1] and self.object_name in self._geom_names[g2]:
-                return False
-            return (
-                self.object_name in self._geom_names[g1]
-                or self.object_name in self._geom_names[g2]
-                or "ground" in self._geom_names[g1]
-                or "ground" in self._geom_names[g2]
-            )
+            # Accept only pairs where one side is the terrain object OR the ground
+            return is_obj1 or is_obj2 or is_gnd1 or is_gnd2
 
         for g1, g2 in candidates:
             # Optional: keep your own filters here (e.g., skip object-ground, only keep interaction with object/ground)
@@ -1027,6 +1138,7 @@ class InteractionMeshRetargeter:
         Fast analytic version: J_qdot = J_v @ T(q)
         """
 
+        body_idx = int(np.asarray(body_idx).item())
         p_body = np.asarray(p_body, dtype=float).reshape(3)
 
         # 1) Make sure kinematics are current once
@@ -1044,7 +1156,7 @@ class InteractionMeshRetargeter:
         # 3) J_v: translational Jacobian wrt generalized velocities (3 x nv)
         Jp = np.zeros((3, self.robot_model.nv), dtype=np.float64, order="C")
         Jr = np.zeros((3, self.robot_model.nv), dtype=np.float64, order="C")
-        mujoco.mj_jac(self.robot_model, self.robot_data, Jp, Jr, p_W, int(body_idx))  # Jp = J_v
+        mujoco.mj_jac(self.robot_model, self.robot_data, Jp, Jr, p_W, body_idx)  # Jp = J_v
 
         T = self._build_transform_qdot_to_qvel_fast()
 

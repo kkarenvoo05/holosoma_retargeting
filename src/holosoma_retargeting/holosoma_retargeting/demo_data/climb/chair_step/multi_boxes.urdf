@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<robot name="chair_box">
+  <link name="world"/>
+  
+  <!-- Single chair box -->
+  <link name="chair_box_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="multi_boxes.obj"/>
+      </geometry>
+      <material name="chair_box_material">
+        <color rgba="0.5 0.5 0.8 1.0"/>
+      </material>
+    </visual>
+
+    <collision name="chair_box">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="multi_boxes.obj"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0.22225" rpy="0 0 0"/>
+      <mass value="10.0"/>
+      <inertia ixx="0.5" ixy="0.0" ixz="0.0" iyy="0.5" iyz="0.0" izz="0.5"/>
+    </inertial>
+  </link>
+
+  <!-- Fixed joint to world -->
+  <joint name="world_to_chair_box" type="fixed">
+    <parent link="world"/>
+    <child link="chair_box_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+</robot>

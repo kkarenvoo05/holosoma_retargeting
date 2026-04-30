@@ -1,0 +1,80 @@
+<!-- MuJoCo include file for stair step assets.
+     Usage: <include file="stair_assets.xml"/> inside <asset> block
+     Then: <include file="stair_body.xml"/> inside <worldbody> block
+
+     Step dimensions:
+       Height per step: 7 in = 0.1778 m
+       Depth per step:  13 in = 0.3302 m  
+       Width per step:  24.5 in = 0.6223 m
+
+     Coordinate system (MuJoCo): X=depth, Y=lateral, Z=height(up)
+
+     The 3 steps form ascending stairs:
+       Step 1 (front/lowest):  height=0.1778m, X=[-0.056, 0.274]
+       Step 2 (middle):        height=0.3556m, X=[-0.376, -0.046]
+       Step 3 (back/highest):  height=0.5334m, X=[-0.705, -0.375]
+       Y range: [-0.192, 0.430]
+
+     Mocap marker positions (left edge of each step top surface):
+       Marker 001 (Step 1): 0.274 0.430 0.1778
+       Marker 002 (Step 2): -0.046 0.430 0.3556
+       Marker 003 (Step 3): -0.375 0.430 0.5334
+-->
+<mujoco model="stair_environment">
+  <compiler angle="radian"/>
+
+  <asset>
+    <material name="ground_material" rgba="0.5 0.5 0.5 1"/>
+
+    <!-- Stair step meshes (no scaling needed, OBJ in meters) -->
+    <mesh name="stair_step1" file="stair_step1.obj"/>
+    <mesh name="stair_step2" file="stair_step2.obj"/>
+    <mesh name="stair_step3" file="stair_step3.obj"/>
+
+    <material name="stair_step1_material" rgba="0.3 0.7 0.9 0.8"/>
+    <material name="stair_step2_material" rgba="0.7 0.3 0.9 0.8"/>
+    <material name="stair_step3_material" rgba="0.9 0.7 0.3 0.8"/>
+  </asset>
+
+  <worldbody>
+    <!-- Ground plane -->
+    <geom name="ground" type="plane" size="10 10 0.1" pos="0 0 0" material="ground_material"/>
+
+    <!-- Step 1: front/lowest, 1x 0.1778m tall -->
+    <body name="stair_step1_body" pos="0 0 0" quat="1 0 0 0">
+      <geom name="stair_step1_geom"
+            type="mesh" mesh="stair_step1"
+            pos="0 0 0" quat="1 0 0 0"
+            material="stair_step1_material"
+            contype="1" conaffinity="1"/>
+    </body>
+
+    <!-- Step 2: middle, 2x 0.1778m = 0.3556m tall -->
+    <body name="stair_step2_body" pos="0 0 0" quat="1 0 0 0">
+      <geom name="stair_step2_geom"
+            type="mesh" mesh="stair_step2"
+            pos="0 0 0" quat="1 0 0 0"
+            material="stair_step2_material"
+            contype="1" conaffinity="1"/>
+    </body>
+
+    <!-- Step 3: back/highest, 3x 0.1778m = 0.5334m tall -->
+    <body name="stair_step3_body" pos="0 0 0" quat="1 0 0 0">
+      <geom name="stair_step3_geom"
+            type="mesh" mesh="stair_step3"
+            pos="0 0 0" quat="1 0 0 0"
+            material="stair_step3_material"
+            contype="1" conaffinity="1"/>
+    </body>
+
+    <!-- Mocap marker sites at left edge of each step top surface -->
+    <!-- These correspond to Stairs:Marker 001/002/003 in the CSV mocap data -->
+    <site name="stair_marker_1" type="sphere" size="0.02"
+          pos="0.274 0.430 0.1778" rgba="1 0 0 1"/>
+    <site name="stair_marker_2" type="sphere" size="0.02"
+          pos="-0.046 0.430 0.3556" rgba="0 1 0 1"/>
+    <site name="stair_marker_3" type="sphere" size="0.02"
+          pos="-0.375 0.430 0.5334" rgba="0 0 1 1"/>
+  </worldbody>
+
+</mujoco>

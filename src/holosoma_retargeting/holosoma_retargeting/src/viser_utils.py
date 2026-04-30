@@ -23,6 +23,7 @@ def create_motion_control_sliders(
     initial_fps: int = 30,
     initial_interp_mult: int = 2,
     loop: bool = True,
+    static_object_pos: np.ndarray | None = None,
 ) -> Tuple[List[viser.GuiInputHandle[int]], List[float]]:
     """
     Create a slider + play/pause controls and a background player thread with smooth, slerp-based interpolation.
@@ -54,6 +55,11 @@ def create_motion_control_sliders(
     n_frames = int(qpos.shape[0])
     if n_frames == 0:
         raise ValueError("motion_sequence is empty.")
+
+    # For static terrain objects (no freejoint), the MuJoCo body is at a fixed world position
+    # (not zero).  We receive that position here and use it as the fallback Viser frame position.
+    _static_pos = np.zeros(3) if static_object_pos is None else np.asarray(static_object_pos)
+    _static_quat = np.array([1.0, 0.0, 0.0, 0.0])
 
     has_object_input = (
         viser_object is not None
@@ -144,14 +150,14 @@ def create_motion_control_sliders(
 
         # object (optional) (MuJoCo order: pos first, then quat)
         if has_object_input and object_base_frame is not None:
-            object_base_frame.position = q[-7:-4]  # obj pos (xyz)
+            object_base_frame.position = q[-7:-4]  # obj pos (xyz) from qpos
             o_q = _quat_continuous(prev["obj_q"], q[-4:])
             prev["obj_q"] = o_q
             object_base_frame.wxyz = o_q
         elif object_base_frame is not None and viser_object is not None:
-            # fallback static pose
-            object_base_frame.position = np.zeros(3)
-            object_base_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
+            # Static terrain: use the fixed world body position computed at init from mj_forward
+            object_base_frame.position = _static_pos
+            object_base_frame.wxyz = _static_quat
 
     def _apply_discrete_frame(i: int) -> None:
         i = int(np.clip(i, 0, n_frames - 1))

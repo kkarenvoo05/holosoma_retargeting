@@ -16,6 +16,7 @@ from typing import Literal
 
 import numpy as np
 import tyro
+import xml.etree.ElementTree as ET
 
 src_root = Path(__file__).resolve().parents[2]
 if str(src_root) not in sys.path:
@@ -174,6 +175,56 @@ def create_ground_points(x_range: tuple[float, float], y_range: tuple[float, flo
     return np.stack([X.flatten(), Y.flatten(), np.zeros_like(X.flatten())], axis=1)
 
 
+def _apply_pelvis_z_correction(
+    human_joints: np.ndarray,
+    smpl_scale: float,
+    constants: SimpleNamespace,
+    data_format: str,
+) -> np.ndarray:
+    """Correct pelvis Z height so shorter humans don't cause bent knees.
+
+    After uniform scaling by smpl_scale, shorter humans have their pelvis placed
+    too low, causing the IK solver to bend the robot's knees. This correction
+    rescales all Z coordinates so the hip Z matches ROBOT_NATURAL_HIP_HEIGHT.
+
+    Args:
+        human_joints: (T, J, 3) joint positions (pre-scale)
+        smpl_scale: Scaling factor applied to human joints
+        constants: Task constants (must have DEMO_JOINTS, ROBOT_NATURAL_HIP_HEIGHT)
+        data_format: Data format name
+
+    Returns:
+        Corrected human_joints array (modified in-place and returned)
+    """
+    if not hasattr(constants, "ROBOT_NATURAL_HIP_HEIGHT"):
+        return human_joints
+
+    # Determine hip joint name based on format
+    hip_joint_name = "Hips" if data_format in ("mocap", "lafan") else "Pelvis"
+    if hip_joint_name not in constants.DEMO_JOINTS:
+        logger.warning("Hip joint '%s' not found in DEMO_JOINTS, skipping pelvis Z correction", hip_joint_name)
+        return human_joints
+
+    hip_idx = constants.DEMO_JOINTS.index(hip_joint_name)
+    scaled_hip_z = human_joints[0, hip_idx, 2] * smpl_scale
+
+    if scaled_hip_z <= 0:
+        logger.warning("Scaled hip Z is <= 0 (%.4f), skipping pelvis Z correction", scaled_hip_z)
+        return human_joints
+
+    target_hip_z = constants.ROBOT_NATURAL_HIP_HEIGHT
+    pelvis_z_correction = target_hip_z / scaled_hip_z
+    human_joints[:, :, 2] *= pelvis_z_correction
+
+    logger.info(
+        "Applied pelvis Z correction: %.4f (hip Z: %.4f → %.4f)",
+        pelvis_z_correction,
+        scaled_hip_z,
+        target_hip_z,
+    )
+    return human_joints
+
+
 def load_motion_data(
     task_type: TaskType,
     data_format: str,
@@ -230,7 +281,8 @@ def load_motion_data(
 
             human_joints = np.load(str(npy_file))[::downsample]
 
-            default_human_height = motion_data_config.default_human_height or 1.78
+            # default_human_height = motion_data_config.default_human_height or 1.5748
+            default_human_height = 1.702 # 1.575 1.8034
             smpl_scale = constants.ROBOT_HEIGHT / default_human_height
         elif data_format == "smplx":
             npz_file = data_path / f"{task_name}.npz"
@@ -272,9 +324,41 @@ def load_motion_data(
         downsample = 4
         human_joints = np.load(str(npy_file))[::downsample]
         num_frames = human_joints.shape[0]
-        object_poses = np.tile(np.array([[1, 0, 0, 0, 0, 0, 0]]), (num_frames, 1))
-        default_human_height = motion_data_config.default_human_height or 1.78
+        # Try to load initial position from box_body.xml
+        default_pos = [0.0, 0.0, 0.0]
+        box_body_path = task_dir / "box_body.xml"
+        if box_body_path.exists():
+            try:
+                tree = ET.parse(box_body_path)
+                root = tree.getroot()
+                # body might be direct child or nested
+                # Try multiple possible names or just pick the first body found
+                possible_names = ["chair_box_link", "multi_boxes_box1_link"]
+                body = None
+                for name in possible_names:
+                    body = root.find(f".//body[@name='{name}']")
+                    if body is not None:
+                        break
+                
+                # If specifically named body not found, try to find *any* body
+                if body is None:
+                    body = root.find(".//body")
+
+                if body is not None and "pos" in body.attrib:
+                    pos_vals = [float(x) for x in body.attrib["pos"].split()]
+                    if len(pos_vals) == 3:
+                        default_pos = pos_vals
+                        logger.info(f"Loaded object position from box_body.xml: {default_pos}")
+            except Exception as e:
+                logger.warning(f"Failed to parse box_body.xml position: {e}")
+
+        object_poses = np.tile(np.array([[1, 0, 0, 0] + default_pos]), (num_frames, 1))
+        # default_human_height = motion_data_config.default_human_height or 1.5748
+        default_human_height = 1.702 # K: 1.575 C: 1.8034 J: 1.702
         smpl_scale = constants.ROBOT_HEIGHT / default_human_height
+
+    # Apply pelvis Z correction to prevent bent knees for shorter humans
+    human_joints = _apply_pelvis_z_correction(human_joints, smpl_scale, constants, data_format)
 
     logger.debug(
         "Loaded %d frames, scale factor: %.4f",
@@ -333,6 +417,25 @@ def setup_object_data(
         box_asset_xml = object_dir / "box_assets.xml"
         scene_xml_name = Path(constants.ROBOT_URDF_FILE).name.replace(".urdf", f"_w_{constants.OBJECT_NAME}.xml")
         scene_xml_file = object_dir / scene_xml_name
+        
+        if not scene_xml_file.exists():
+            # Try finding a file that matches the pattern in the directory
+            possible_files = list(object_dir.glob(f"*{constants.OBJECT_NAME}.xml"))
+            if possible_files:
+                # Prefer one that contains "spherehand" if using a spherehand robot, or just pick the best match
+                # For now, let's just pick one that ends with _w_{constants.OBJECT_NAME}.xml and contains the robot name roughly
+                # Or just fallback to the one we know: g1_29dof_spherehand_w_multi_boxes.xml
+                # Let's try inserting spherehand
+                scene_xml_name_spherehand = Path(constants.ROBOT_URDF_FILE).name.replace(".urdf", f"_spherehand_w_{constants.OBJECT_NAME}.xml")
+                scene_xml_file_spherehand = object_dir / scene_xml_name_spherehand
+                if scene_xml_file_spherehand.exists():
+                    scene_xml_file = scene_xml_file_spherehand
+                    print(f"Fallback: using {scene_xml_file}")
+                # Else check for other common patterns
+                elif (object_dir / "g1_29dof_spherehand_w_multi_boxes.xml").exists():
+                     scene_xml_file = object_dir / "g1_29dof_spherehand_w_multi_boxes.xml"
+                     print(f"Fallback: using {scene_xml_file}")
+            
         # Set SCENE_XML_FILE in constants BEFORE creating retargeter (needed for temp_retargeter)
         constants.SCENE_XML_FILE = str(scene_xml_file)
 

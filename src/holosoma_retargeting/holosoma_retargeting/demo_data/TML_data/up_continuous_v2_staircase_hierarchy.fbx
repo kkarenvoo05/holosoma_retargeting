@@ -1,0 +1,190 @@
+; FBX 7.4.0 project file
+; Created by csv_markers_to_stair_fbx.py
+FBXHeaderExtension:  {
+  FBXHeaderVersion: 1003
+  FBXVersion: 7400
+  Creator: "Codex stair generator"
+}
+GlobalSettings:  {
+  Version: 1000
+  Properties70:  {
+    P: "UpAxis", "int", "Integer", "", 1
+    P: "UpAxisSign", "int", "Integer", "", 1
+    P: "FrontAxis", "int", "Integer", "", 2
+    P: "FrontAxisSign", "int", "Integer", "", 1
+    P: "CoordAxis", "int", "Integer", "", 0
+    P: "CoordAxisSign", "int", "Integer", "", 1
+    P: "UnitScaleFactor", "double", "Number", "", 1
+    P: "OriginalUnitScaleFactor", "double", "Number", "", 1
+  }
+}
+Documents:  {
+  Count: 1
+  Document: 100000, "Scene", "Scene" {
+    Properties70:  {
+      P: "SourceObject", "object", "", ""
+    }
+    RootNode: 0
+  }
+}
+Definitions:  {
+  Version: 100
+  Count: 8
+  ObjectType: "Geometry" {
+    Count: 3
+  }
+  ObjectType: "Model" {
+    Count: 4
+  }
+  ObjectType: "Material" {
+    Count: 1
+  }
+}
+Objects:  {
+  Model: 200000, "Model::Staircase", "Null" {
+    Version: 232
+    Properties70:  {
+      P: "InheritType", "enum", "", "", 1
+      P: "Lcl Translation", "Lcl Translation", "", "A", 0,0,0
+      P: "Lcl Rotation", "Lcl Rotation", "", "A", 0,0,0
+      P: "Lcl Scaling", "Lcl Scaling", "", "A", 1,1,1
+    }
+    Shading: T
+    Culling: "CullingOff"
+  }
+  Material: 300000, "Material::StairMaterial", "" {
+    Version: 102
+    ShadingModel: "phong"
+    MultiLayer: 0
+    Properties70:  {
+      P: "DiffuseColor", "Color", "", "A", 0.72,0.72,0.72
+    }
+  }
+  Geometry: 400000, "Geometry::step_01Geometry", "Mesh" {
+    GeometryVersion: 124
+    Vertices: *24 {
+      a: 0.000000000,0.000000000,0.000000000,-5.028352554,0.000000000,76.033911320,-38.102977554,0.000000000,73.846586320,-33.074625000,0.000000000,-2.187325000,0.000000000,17.558225000,0.000000000,-5.028352554,17.558225000,76.033911320,-38.102977554,17.558225000,73.846586320,-33.074625000,17.558225000,-2.187325000
+    }
+    PolygonVertexIndex: *36 {
+      a: 0,2,-2,0,3,-3,4,5,-7,4,6,-8,0,1,-6,0,5,-5,3,7,-7,3,6,-3,0,4,-8,0,7,-4,1,2,-7,1,6,-6
+    }
+    LayerElementMaterial: 0 {
+      Version: 101
+      Name: ""
+      MappingInformationType: "AllSame"
+      ReferenceInformationType: "IndexToDirect"
+      Materials: *1 {
+        a: 0
+      }
+    }
+    Layer: 0 {
+      Version: 100
+      LayerElement: {
+        Type: "LayerElementMaterial"
+        TypedIndex: 0
+      }
+    }
+  }
+  Model: 500000, "Model::step_01", "Mesh" {
+    Version: 232
+    Properties70:  {
+      P: "InheritType", "enum", "", "", 1
+      P: "DefaultAttributeIndex", "int", "Integer", "", 0
+      P: "Lcl Translation", "Lcl Translation", "", "A", 0.000000000,0.000000000,0.000000000
+      P: "Lcl Rotation", "Lcl Rotation", "", "A", 0,0,0
+      P: "Lcl Scaling", "Lcl Scaling", "", "A", 1,1,1
+    }
+    Shading: T
+    Culling: "CullingOff"
+  }
+  Geometry: 400001, "Geometry::step_02Geometry", "Mesh" {
+    GeometryVersion: 124
+    Vertices: *24 {
+      a: 0.000000000,0.000000000,0.000000000,-5.028352554,0.000000000,76.033911320,-38.102977554,0.000000000,73.846586320,-33.074625000,0.000000000,-2.187325000,0.000000000,35.116450000,0.000000000,-5.028352554,35.116450000,76.033911320,-38.102977554,35.116450000,73.846586320,-33.074625000,35.116450000,-2.187325000
+    }
+    PolygonVertexIndex: *36 {
+      a: 0,2,-2,0,3,-3,4,5,-7,4,6,-8,0,1,-6,0,5,-5,3,7,-7,3,6,-3,0,4,-8,0,7,-4,1,2,-7,1,6,-6
+    }
+    LayerElementMaterial: 0 {
+      Version: 101
+      Name: ""
+      MappingInformationType: "AllSame"
+      ReferenceInformationType: "IndexToDirect"
+      Materials: *1 {
+        a: 0
+      }
+    }
+    Layer: 0 {
+      Version: 100
+      LayerElement: {
+        Type: "LayerElementMaterial"
+        TypedIndex: 0
+      }
+    }
+  }
+  Model: 500001, "Model::step_02", "Mesh" {
+    Version: 232
+    Properties70:  {
+      P: "InheritType", "enum", "", "", 1
+      P: "DefaultAttributeIndex", "int", "Integer", "", 0
+      P: "Lcl Translation", "Lcl Translation", "", "A", -33.074625000,0.000000000,-2.187325000
+      P: "Lcl Rotation", "Lcl Rotation", "", "A", 0,0,0
+      P: "Lcl Scaling", "Lcl Scaling", "", "A", 1,1,1
+    }
+    Shading: T
+    Culling: "CullingOff"
+  }
+  Geometry: 400002, "Geometry::step_03Geometry", "Mesh" {
+    GeometryVersion: 124
+    Vertices: *24 {
+      a: 0.000000000,0.000000000,0.000000000,-5.028352554,0.000000000,76.033911320,-38.102977554,0.000000000,73.846586320,-33.074625000,0.000000000,-2.187325000,0.000000000,52.674675000,0.000000000,-5.028352554,52.674675000,76.033911320,-38.102977554,52.674675000,73.846586320,-33.074625000,52.674675000,-2.187325000
+    }
+    PolygonVertexIndex: *36 {
+      a: 0,2,-2,0,3,-3,4,5,-7,4,6,-8,0,1,-6,0,5,-5,3,7,-7,3,6,-3,0,4,-8,0,7,-4,1,2,-7,1,6,-6
+    }
+    LayerElementMaterial: 0 {
+      Version: 101
+      Name: ""
+      MappingInformationType: "AllSame"
+      ReferenceInformationType: "IndexToDirect"
+      Materials: *1 {
+        a: 0
+      }
+    }
+    Layer: 0 {
+      Version: 100
+      LayerElement: {
+        Type: "LayerElementMaterial"
+        TypedIndex: 0
+      }
+    }
+  }
+  Model: 500002, "Model::step_03", "Mesh" {
+    Version: 232
+    Properties70:  {
+      P: "InheritType", "enum", "", "", 1
+      P: "DefaultAttributeIndex", "int", "Integer", "", 0
+      P: "Lcl Translation", "Lcl Translation", "", "A", -66.149250000,0.000000000,-4.374650000
+      P: "Lcl Rotation", "Lcl Rotation", "", "A", 0,0,0
+      P: "Lcl Scaling", "Lcl Scaling", "", "A", 1,1,1
+    }
+    Shading: T
+    Culling: "CullingOff"
+  }
+}
+Connections:  {
+  C: "OO", 200000, 0
+  C: "OO", 300000, 200000
+  C: "OO", 400000, 500000
+  C: "OO", 500000, 200000
+  C: "OO", 300000, 500000
+  C: "OO", 400001, 500001
+  C: "OO", 500001, 200000
+  C: "OO", 300000, 500001
+  C: "OO", 400002, 500002
+  C: "OO", 500002, 200000
+  C: "OO", 300000, 500002
+}
+Takes:  {
+  Current: ""
+}

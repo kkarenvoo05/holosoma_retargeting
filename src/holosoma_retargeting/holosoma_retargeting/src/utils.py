@@ -620,15 +620,21 @@ def create_scaled_multi_boxes_urdf(
         sx, sy, sz = new_scale
         output_path = urdf_path.replace(".urdf", f"_scaled_{sx:.2f}_{sy:.2f}_{sz:.2f}.urdf")
 
-    if Path(output_path).exists():
-        return output_path
+
 
     with open(urdf_path) as f:
         content = f.read()
 
-    pattern = r'scale="[^"]*"'
-    replacement = f'scale="{new_scale[0]} {new_scale[1]} {new_scale[2]}"'
-    content = re.sub(pattern, replacement, content)
+    # If scale attribute exists, replace it. Otherwise, add it after filename.
+    if 'scale="' in content:
+        pattern = r'scale="[^"]*"'
+        replacement = f'scale="{new_scale[0]} {new_scale[1]} {new_scale[2]}"'
+        content = re.sub(pattern, replacement, content)
+    else:
+        # Add scale attribute to mesh tags
+        pattern = r'(<mesh filename="[^"]*")'
+        replacement = f'\\1 scale="{new_scale[0]} {new_scale[1]} {new_scale[2]}"'
+        content = re.sub(pattern, replacement, content)
 
     with open(output_path, "w") as f:
         f.write(content)
@@ -649,9 +655,22 @@ def create_scaled_multi_boxes_xml(
     with open(xml_path) as f:
         content = f.read()
 
+    scale_str = f'scale="{new_scale[0]} {new_scale[1]} {new_scale[2]}"'
+    
+    # First try to replace existing scale attribute
     pattern = r'scale="[^"]*"'
-    replacement = f'scale="{new_scale[0]} {new_scale[1]} {new_scale[2]}"'
-    content = re.sub(pattern, replacement, content)
+    if re.search(pattern, content):
+        content = re.sub(pattern, scale_str, content)
+    else:
+        # If no scale attribute exists, add it to mesh elements
+        # Match <mesh ... /> or <mesh ...> and insert scale before the closing
+        mesh_pattern = r'(<mesh\s+[^>]*?)(/>|>)'
+        def add_scale(match):
+            # Check if this mesh tag already has scale (shouldn't happen if we're here)
+            if 'scale=' in match.group(1):
+                return match.group(0)
+            return f'{match.group(1)} {scale_str}{match.group(2)}'
+        content = re.sub(mesh_pattern, add_scale, content)
 
     with open(output_path, "w") as f:
         f.write(content)

@@ -1,0 +1,92 @@
+{
+  "source_fbx": "/Users/karenvo/TML_research/holosoma/src/holosoma_retargeting/holosoma_retargeting/demo_data/TML_data/up_continuous_v2_staircase_hierarchy.fbx",
+  "unit_scale_to_meters": 0.01,
+  "axis_conversion": "fbx_y_up_to_z_up_with_negated_y",
+  "adjustments": {
+    "first_step_height_offset_m": 0.02,
+    "third_step_length_scale": 3.0,
+    "third_step_length_axis": "x",
+    "third_step_length_anchor": "front_edge_x_max"
+  },
+  "stairs": [
+    {
+      "name": "step_01",
+      "bounds_min_m": [
+        -0.38102977554,
+        -0.7603391132,
+        0.0
+      ],
+      "bounds_max_m": [
+        0.0,
+        0.02187325,
+        0.19558225
+      ],
+      "size_m": [
+        0.38102977554,
+        0.7822123632,
+        0.19558225
+      ],
+      "top_front_left_marker_m": [
+        -0.38102977554,
+        0.02187325,
+        0.19558225
+      ]
+    },
+    {
+      "name": "step_02",
+      "bounds_min_m": [
+        -0.7117760255400001,
+        -0.7384658632,
+        0.0
+      ],
+      "bounds_max_m": [
+        -0.33074624999999996,
+        0.0437465,
+        0.3511645
+      ],
+      "size_m": [
+        0.3810297755400001,
+        0.7822123632,
+        0.3511645
+      ],
+      "top_front_left_marker_m": [
+        -0.7117760255400001,
+        0.0437465,
+        0.3511645
+      ]
+    },
+    {
+      "name": "step_03",
+      "bounds_min_m": [
+        -1.70401477554,
+        -0.7165926132,
+        0.0
+      ],
+      "bounds_max_m": [
+        -0.6614924999999999,
+        0.10936625,
+        0.52674675
+      ],
+      "size_m": [
+        1.0425222755400001,
+        0.8259588632,
+        0.52674675
+      ],
+      "top_front_left_marker_m": [
+        -1.6537312499999999,
+        0.10936625,
+        0.52674675
+      ]
+    }
+  ],
+  "combined_bounds_min_m": [
+    -1.70401477554,
+    -0.7603391132,
+    0.0
+  ],
+  "combined_bounds_max_m": [
+    0.0,
+    0.10936625,
+    0.52674675
+  ]
+}

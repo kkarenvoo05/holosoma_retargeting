@@ -83,6 +83,12 @@ class DataConversionConfig:
     use_omniretarget_data: bool = False
     """Use OmniRetarget data format."""
 
+    scene_xml: str | None = None
+    """Path to the scene XML file (required for climbing tasks)."""
+
+    headless: bool = False
+    """Run without a viewer (headless mode)."""
+
     # --- Nested configs ---
     robot_config: RobotConfig = field(default_factory=lambda: RobotConfig(robot_type="g1"))
     """Robot configuration (nested - can override robot_urdf_file, robot_dof, etc.

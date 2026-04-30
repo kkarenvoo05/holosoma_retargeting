@@ -1,0 +1,4 @@
+<mujocoinclude>
+    <mesh name="chair_box" file="multi_boxes.obj"/>
+    <material name="chair_box_material" rgba="0.5 0.5 0.8 1.0"/>
+</mujocoinclude>

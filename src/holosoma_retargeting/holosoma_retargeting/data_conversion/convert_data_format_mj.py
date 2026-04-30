@@ -45,7 +45,6 @@ StaticState = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torc
 def create_task_constants(
     robot_config: RobotConfig,
     motion_data_config: MotionDataConfig,
-    *,
     object_name: str | None = None,
 ) -> SimpleNamespace:
     """Create a mutable namespace with robot and motion data attributes."""
@@ -60,6 +59,8 @@ def create_task_constants(
 
     if object_name is not None:
         namespace.OBJECT_NAME = object_name
+    else:
+        namespace.OBJECT_NAME = "ground"
 
     if namespace.OBJECT_NAME != "ground":
         namespace.OBJECT_URDF_FILE = f"models/{namespace.OBJECT_NAME}/{namespace.OBJECT_NAME}.urdf"
@@ -388,7 +389,11 @@ def run_simulator(args_cli: DataConversionConfig):
     # Load Mujoco model
     object_name = constants.OBJECT_NAME
     robot_model_path = constants.ROBOT_URDF_FILE
-    if object_name == "ground":
+    
+    # Use scene_xml if provided, otherwise construct path
+    if args_cli.scene_xml is not None:
+        robot_xml_path = args_cli.scene_xml
+    elif object_name == "ground":
         robot_xml_path = robot_model_path.replace(".urdf", ".xml")
     elif object_name == "multi_boxes":
         robot_xml_path = constants.SCENE_XML_FILE

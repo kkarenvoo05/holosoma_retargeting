@@ -1,0 +1,35 @@
+# Single box for chair step motion
+# Generated for Holosoma climbing retargeting
+v -0.2286 -0.2032 0.0000
+v -0.2286 -0.2032 0.4150
+v -0.2286 0.2032 0.0000
+v -0.2286 0.2032 0.4150
+v 0.2286 -0.2032 0.0000
+v 0.2286 -0.2032 0.4150
+v 0.2286 0.2032 0.0000
+v 0.2286 0.2032 0.4150
+
+# Faces (box with correct normals)
+# Bottom face (z=0)
+f 1 3 5
+f 3 7 5
+
+# Top face (z=0.4150)
+f 2 6 4
+f 4 6 8
+
+# Front face (y=-0.2032)
+f 1 5 2
+f 2 5 6
+
+# Back face (y=0.2032)
+f 3 4 7
+f 4 8 7
+
+# Left face (x=-0.2032)
+f 1 2 3
+f 2 4 3
+
+# Right face (x=0.2032)
+f 5 7 6
+f 6 7 8
